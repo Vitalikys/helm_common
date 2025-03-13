@@ -1,0 +1,136 @@
+# Default values for common-service.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+image:
+  repository: registry.gitlab.com/charity-hero-team/charityhero-platform/magnetto-backend/common-service
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+
+imagePullSecrets:
+  - name: gitlab-pull-secret
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Automatically mount a ServiceAccount's API credentials?
+  automount: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+serviceEnvs:
+  ASPNETCORE_APPL_PATH: "/api/v2/common"
+  PATH_PREF: "/api/v2/common"
+  AUTH_SERVER_URL: "https://magnetto-lg.cloud.charityhero.team/api/v2/auth"
+  #AUTH_PUBLIC_KEY: "DUMMY"
+
+vault_settings:
+  common_secrets: "kv/backend/creds/dev-common"       # Common secrets like license 
+  service_secrets: "kv/backend/creds/common-service" # Service specific secrets
+  role: "backend-dev"
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/use-forwarded-headers: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "Content-Security-Policy: upgrade-insecure-requests";
+  hosts:
+    - host: magnetto-lg.cloud.charityhero.team
+      paths:
+        - path: /api/v2/common
+          pathType: Prefix
+  #tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: http
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: http
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+# Additional volumes on the output Deployment definition.
+volumes:
+  - name: app-config
+    configMap:
+      name: common-service
+
+# Additional volumeMounts on the output Deployment definition.
+volumeMounts:
+  - name: app-config
+    mountPath: /app/appsettings.json
+    subPath: appsettings.json
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+magnettoApiVersion: "2"
+
+
+initContainers: {}
+#  DbMigration: true
+#  image:
+#    repository: registry.gitlab.com/charity-hero-team/charityhero-platform/magnetto-backend/common-service/migrations
+#    pullPolicy: Always
+#    tag: latest
+#  connection_string: "User ID=dev;Password=0t00QP2xU1M0YF8flQ10k0;Host=charity-hero-dev-database-default.czoceem444qy.eu-west-3.rds.amazonaws.com;Port=5432;Database=mt_charity;Pooling=true;"
+  # secure this string later, preferably configure migrations within gitlab itself, runners required
+#  resources: {}
